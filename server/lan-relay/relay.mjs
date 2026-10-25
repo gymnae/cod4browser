@@ -12,6 +12,10 @@
 // accepts binary frames only. Put it behind a TLS reverse proxy (e.g. Caddy)
 // so pages served over HTTPS reach it as wss://host/lan.
 //
+// It can also serve the generated browser site (--site), so one process is a
+// complete LAN host, and require HTTP basic auth for everything except
+// /healthz (KISAK_BASIC_AUTH=user:password). It never serves game data.
+//
 // Wire protocol (version 1, one datagram per binary WebSocket message):
 //   client -> relay  BIND    0x01 port:u16be                  claim a UDP port
 //   client -> relay  SEND    0x02 ip:4 port:u16be payload      send datagram
@@ -21,7 +25,9 @@
 // 255.255.255.255 or 10.77.255.255 reaches every other host bound to that port.
 
 import { createServer } from "node:http";
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { createReadStream, statSync } from "node:fs";
+import { extname, resolve, sep } from "node:path";
 import { createSocket } from "node:dgram";
 import { pathToFileURL } from "node:url";
 
@@ -277,7 +283,70 @@ export function attachUdpBridge(router, { virtualIp, virtualPort, targetHost, ta
     };
 }
 
-export function createRelayServer({ path = "/lan", log = () => {}, bridges = [] } = {}) {
+const CONTENT_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".wasm": "application/wasm",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json",
+    ".txt": "text/plain; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+    ".woff2": "font/woff2",
+};
+
+// Returns true when the request carries the expected basic credentials.
+export function checkBasicAuth(header, expected) {
+    if (!expected) return true;
+    const match = /^Basic\s+([A-Za-z0-9+/=]+)$/.exec(header ?? "");
+    if (!match) return false;
+    const given = Buffer.from(Buffer.from(match[1], "base64").toString("utf8"));
+    const want = Buffer.from(expected);
+    return given.length === want.length && timingSafeEqual(given, want);
+}
+
+function serveStatic(root, request, response) {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+        response.writeHead(405, { allow: "GET, HEAD" });
+        response.end();
+        return;
+    }
+    let pathname;
+    try {
+        pathname = decodeURIComponent(new URL(request.url, "http://relay").pathname);
+    } catch {
+        response.writeHead(400);
+        response.end();
+        return;
+    }
+    if (pathname.endsWith("/")) pathname += "index.html";
+    const file = resolve(root, "." + pathname);
+    let stats = null;
+    if (file.startsWith(root + sep)) {
+        try { stats = statSync(file); } catch { stats = null; }
+    }
+    if (!stats || !stats.isFile()) {
+        response.writeHead(404, { "content-type": "text/plain" });
+        response.end("Not found\n");
+        return;
+    }
+    response.writeHead(200, {
+        "content-type": CONTENT_TYPES[extname(file).toLowerCase()] ?? "application/octet-stream",
+        "content-length": stats.size,
+        "cache-control": "no-cache",
+        "x-content-type-options": "nosniff",
+    });
+    if (request.method === "HEAD") {
+        response.end();
+        return;
+    }
+    createReadStream(file).pipe(response);
+}
+
+export function createRelayServer({ path = "/lan", log = () => {}, bridges = [], site = null, auth = null } = {}) {
+    const siteRoot = site ? resolve(site) : null;
     const router = new LanRouter({ log });
     const udpBridges = bridges.map((b) => attachUdpBridge(router, b));
     const server = createServer((request, response) => {
@@ -286,12 +355,26 @@ export function createRelayServer({ path = "/lan", log = () => {}, bridges = [] 
             response.end(`ok ${router.hosts.size}\n`);
             return;
         }
+        if (!checkBasicAuth(request.headers.authorization, auth)) {
+            response.writeHead(401, { "www-authenticate": 'Basic realm="KisakCOD", charset="UTF-8"' });
+            response.end();
+            return;
+        }
+        const pathname = new URL(request.url, "http://relay").pathname;
+        if (siteRoot && pathname !== path) {
+            serveStatic(siteRoot, request, response);
+            return;
+        }
         response.writeHead(426, { "content-type": "text/plain" });
         response.end("WebSocket upgrade required\n");
     });
     server.on("upgrade", (request, socket) => {
         const url = new URL(request.url, "http://relay");
         const key = request.headers["sec-websocket-key"];
+        if (!checkBasicAuth(request.headers.authorization, auth)) {
+            socket.end("HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"KisakCOD\"\r\nConnection: close\r\n\r\n");
+            return;
+        }
         if (url.pathname !== path || !key || request.headers.upgrade?.toLowerCase() !== "websocket" ||
             url.searchParams.get("v") !== String(PROTOCOL_VERSION)) {
             socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
@@ -320,8 +403,17 @@ export function createRelayServer({ path = "/lan", log = () => {}, bridges = [] 
     return { server, router };
 }
 
+// VIP:PORT=HOST:PORT, e.g. 10.77.1.1:28960=127.0.0.1:28960
+function parseBridge(text) {
+    const match = /^([\d.]+):(\d+)=([^:]+):(\d+)$/.exec(text.trim());
+    if (!match) throw new Error("a UDP bridge must be VIP:PORT=HOST:PORT");
+    const virtualIp = parseIp(match[1]);
+    if (((virtualIp & SUBNET_MASK) >>> 0) !== SUBNET) throw new Error("bridge address must be in 10.77.0.0/16");
+    return { virtualIp, virtualPort: Number(match[2]), targetHost: match[3], targetPort: Number(match[4]) };
+}
+
 function parseArguments(argv) {
-    const options = { listen: "127.0.0.1", port: 8481, path: "/lan", bridges: [] };
+    const options = { listen: "127.0.0.1", port: 8481, path: "/lan", bridges: [], site: null };
     for (let i = 0; i < argv.length; ++i) {
         const arg = argv[i];
         const value = () => {
@@ -331,15 +423,13 @@ function parseArguments(argv) {
         if (arg === "--listen") options.listen = value();
         else if (arg === "--port") options.port = Number(value());
         else if (arg === "--path") options.path = value();
-        else if (arg === "--udp-bridge") {
-            // --udp-bridge 10.77.1.1:28960=127.0.0.1:28960
-            const match = /^([\d.]+):(\d+)=([^:]+):(\d+)$/.exec(value());
-            if (!match) throw new Error("--udp-bridge expects VIP:PORT=HOST:PORT");
-            const virtualIp = parseIp(match[1]);
-            if (((virtualIp & SUBNET_MASK) >>> 0) !== SUBNET) throw new Error("bridge address must be in 10.77.0.0/16");
-            options.bridges.push({ virtualIp, virtualPort: Number(match[2]), targetHost: match[3], targetPort: Number(match[4]) });
-        } else if (arg === "--help") {
-            console.log("usage: relay.mjs [--listen ADDR] [--port N] [--path /lan] [--udp-bridge VIP:PORT=HOST:PORT]...");
+        else if (arg === "--site") options.site = value();
+        else if (arg === "--udp-bridge") options.bridges.push(parseBridge(value()));
+        else if (arg === "--help") {
+            console.log("usage: relay.mjs [--listen ADDR] [--port N] [--path /lan] [--site DIR]\n" +
+                "                [--udp-bridge VIP:PORT=HOST:PORT]...\n" +
+                "environment: KISAK_BASIC_AUTH=user:password requires HTTP basic auth\n" +
+                "             KISAK_UDP_BRIDGE=VIP:PORT=HOST:PORT[,...] adds UDP bridges");
             process.exit(0);
         } else throw new Error(`unknown argument: ${arg}`);
     }
@@ -348,13 +438,21 @@ function parseArguments(argv) {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     const options = parseArguments(process.argv.slice(2));
+    for (const bridge of (process.env.KISAK_UDP_BRIDGE ?? "").split(",").filter((b) => b.trim()))
+        options.bridges.push(parseBridge(bridge));
+    const auth = process.env.KISAK_BASIC_AUTH || null;
+    if (auth && !auth.includes(":")) throw new Error("KISAK_BASIC_AUTH must be user:password");
     const { server } = createRelayServer({
         path: options.path,
         bridges: options.bridges,
+        site: options.site,
+        auth,
         log: (line) => console.log(`[lan-relay] ${line}`),
     });
     server.listen(options.port, options.listen, () => {
-        console.log(`[lan-relay] listening on ${options.listen}:${options.port}${options.path}`);
+        console.log(`[lan-relay] listening on ${options.listen}:${options.port}${options.path}` +
+            (options.site ? `, serving ${resolve(options.site)}` : "") +
+            (auth ? ", basic auth required" : ""));
         for (const b of options.bridges) {
             console.log(`[lan-relay] bridge ${ipToString(b.virtualIp)}:${b.virtualPort} -> ${b.targetHost}:${b.targetPort}`);
         }

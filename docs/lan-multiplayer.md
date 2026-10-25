@@ -51,6 +51,15 @@ The engine connects to `wss://<page host>/lan?v=1` by default. Set
 
 ## Server setup (Linux + Caddy)
 
+On a [Pelican](https://pelican.dev) or Pterodactyl node, import the egg in
+`pelican/` instead: it builds the site and runs the relay with `--site`, so the
+steps below reduce to the HTTPS reverse proxy. See `pelican/README.md`.
+
+The relay can serve the generated site itself (`--site build/web-mp/site`) and
+require basic auth for the page and `/lan` (`KISAK_BASIC_AUTH=user:password`).
+It never serves game data.
+
+
 1. Build the multiplayer site with `tools/build_web.sh --mp` (Windows:
    configure with `-DKISAK_WEB_GAME=mp` in a separate build directory) and copy
    `build/web-mp/site` to `/srv/kisakcod/site`.

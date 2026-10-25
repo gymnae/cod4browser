@@ -31,6 +31,13 @@ for required in "$EM_CONFIG" "$toolchain"; do
     test -f "$required" || { echo "missing pinned toolchain file: $required" >&2; exit 1; }
 done
 
+# OpenAL Soft (reverb) needs CMake >= 3.31; the pinned toolchain uses 4.2.
+cmake_version=$(cmake --version | head -n1 | awk '{print $3}')
+if ! printf '3.31\n%s\n' "$cmake_version" | sort -V -C; then
+    echo "CMake $cmake_version is too old; install CMake 3.31 or newer (e.g. pip install 'cmake==4.2.*')" >&2
+    exit 1
+fi
+
 suffix=$([ "$game" = mp ] && echo -mp || true)
 if [ "$diagnostics" = ON ]; then
     build="$root/build/web-diagnostics$suffix"; : "${target:=KisakCOD-web-diagnostics}"

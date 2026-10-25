@@ -133,3 +133,64 @@ test("bridges a virtual address to a real UDP server", async () => {
         udp.close();
     }
 });
+
+test("serves the browser site without escaping its directory", async () => {
+    const { mkdtempSync, writeFileSync, mkdirSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const root = mkdtempSync(join(tmpdir(), "relay-site-"));
+    const site = join(root, "site");
+    mkdirSync(site);
+    writeFileSync(join(site, "index.html"), "<!doctype html>hello");
+    writeFileSync(join(site, "kisakcod.wasm"), Buffer.from([0, 97, 115, 109]));
+    writeFileSync(join(root, "secret.txt"), "outside");
+    const { server } = await startRelay({ site });
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+        const index = await fetch(`${base}/`);
+        assert.equal(index.status, 200);
+        assert.match(index.headers.get("content-type"), /text\/html/);
+        assert.equal(await index.text(), "<!doctype html>hello");
+        const wasm = await fetch(`${base}/kisakcod.wasm`);
+        assert.equal(wasm.headers.get("content-type"), "application/wasm");
+        for (const escape of ["/../secret.txt", "/%2e%2e/secret.txt", "/..%2fsecret.txt"]) {
+            assert.equal((await fetch(base + escape)).status, 404, escape);
+        }
+        assert.equal((await fetch(`${base}/missing.mjs`)).status, 404);
+        assert.equal((await fetch(`${base}/`, { method: "POST" })).status, 405);
+    } finally {
+        server.close();
+    }
+});
+
+test("basic auth guards the site and the relay but not health checks", async () => {
+    const { server } = await startRelay({ site: process.cwd(), auth: "lan:party" });
+    const port = server.address().port;
+    const base = `http://127.0.0.1:${port}`;
+    const good = "Basic " + Buffer.from("lan:party").toString("base64");
+    const bad = "Basic " + Buffer.from("lan:nope").toString("base64");
+    try {
+        assert.equal((await fetch(`${base}/healthz`)).status, 200);
+        const denied = await fetch(`${base}/package.json`);
+        assert.equal(denied.status, 401);
+        assert.match(denied.headers.get("www-authenticate"), /^Basic/);
+        assert.equal((await fetch(`${base}/package.json`, { headers: { authorization: bad } })).status, 401);
+        assert.equal((await fetch(`${base}/package.json`, { headers: { authorization: good } })).status, 200);
+
+        const { request } = await import("node:http");
+        const upgrade = (authorization) => new Promise((resolveUpgrade) => {
+            const headers = { connection: "Upgrade", upgrade: "websocket",
+                "sec-websocket-version": "13", "sec-websocket-key": "dGhlIHNhbXBsZSBub25jZQ==" };
+            if (authorization) headers.authorization = authorization;
+            const req = request({ port, path: "/lan?v=1", headers });
+            req.on("upgrade", (res, socket) => { socket.destroy(); resolveUpgrade(101); });
+            req.on("response", (res) => { res.resume(); resolveUpgrade(res.statusCode); });
+            req.on("error", () => resolveUpgrade(-1));
+            req.end();
+        });
+        assert.equal(await upgrade(null), 401);
+        assert.equal(await upgrade(good), 101);
+    } finally {
+        server.close();
+    }
+});

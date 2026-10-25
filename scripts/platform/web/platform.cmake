@@ -23,12 +23,24 @@ option(KISAK_WEB_SKIP_UNUSED_SHADOW_BOUNDS "Skip dynamic bounds unused by shadow
 option(KISAK_WEB_BATCH_SHADOW_ERRORS "Check shadow draws once per readiness group" ON)
 option(KISAK_WEB_DIRECT_CLOUD_APPEND "Expand particle clouds directly into the assembled scene" ON)
 
+# Engine identity: the offline single-player product (sp) or the LAN
+# multiplayer product (mp). Configure each in its own build directory.
+set(KISAK_WEB_GAME "sp" CACHE STRING "Browser engine identity: sp or mp")
+set_property(CACHE KISAK_WEB_GAME PROPERTY STRINGS sp mp)
+if (KISAK_WEB_GAME STREQUAL "sp")
+    set(KISAK_WEB_GAME_DEFINITION KISAK_SP=1)
+elseif (KISAK_WEB_GAME STREQUAL "mp")
+    set(KISAK_WEB_GAME_DEFINITION KISAK_MP=1)
+else()
+    message(FATAL_ERROR "KISAK_WEB_GAME must be sp or mp")
+endif()
+
 function(kisak_configure_web_compile_target TARGET_NAME)
     target_compile_features(${TARGET_NAME} PRIVATE cxx_std_20)
     # Platform and engine identity are orthogonal. Web must never inherit the
-    # Win32 host merely to select the canonical offline single-player code.
+    # Win32 host merely to select the canonical engine code.
     target_compile_definitions(${TARGET_NAME} PRIVATE
-        KISAK_WEB=1 KISAK_SP=1 dNODEBUG=1
+        KISAK_WEB=1 ${KISAK_WEB_GAME_DEFINITION} dNODEBUG=1
         KISAK_WEB_SKIP_FLOATZ_LIGHTING=$<BOOL:${KISAK_WEB_SKIP_FLOATZ_LIGHTING}>
         KISAK_WEB_BATCH_DYNAMIC_UPLOAD_ERRORS=$<BOOL:${KISAK_WEB_BATCH_DYNAMIC_UPLOAD_ERRORS}>
         # MSVC integral spellings occur in the bundled ODE sources before an

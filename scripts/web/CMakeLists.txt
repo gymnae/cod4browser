@@ -6,7 +6,11 @@ option(KISAK_WEB_DIAGNOSTICS "Build the separate browser diagnostic artifact" OF
 
 include(${PLATFORM_DIR}/web/platform.cmake)
 include(${SCRIPTS_DIR}/common_files.cmake)
-include(${SCRIPTS_DIR}/sp/sp_files.cmake)
+if (KISAK_WEB_GAME STREQUAL "mp")
+    include(${SCRIPTS_DIR}/mp/mp_files.cmake)
+else()
+    include(${SCRIPTS_DIR}/sp/sp_files.cmake)
+endif()
 list(REMOVE_DUPLICATES CGAME)
 
 # Loose-source XAnim parsing is a native development path. Browser startup is
@@ -175,6 +179,17 @@ set(KISAK_WEB_CANONICAL_RUNTIME_SOURCES
     $<TARGET_OBJECTS:kisak_web_runtime_prefix>
 )
 
+if (KISAK_WEB_GAME STREQUAL "mp")
+    # These client owners were extracted from the single-player cl_main.
+    # Multiplayer keeps its own canonical copies in client_mp/cl_main_mp.cpp.
+    list(REMOVE_ITEM KISAK_WEB_CANONICAL_RUNTIME_SOURCES
+        "${SRC_DIR}/client/cl_fastfile_config.cpp"
+        "${SRC_DIR}/client/cl_controller.cpp"
+        "${SRC_DIR}/client/cl_initialization.cpp"
+        "${SRC_DIR}/client/cl_main_pc.cpp"
+        "${SRC_DIR}/ui/mission.cpp")
+endif()
+
 set(KISAK_WEB_CANONICAL_ADAPTER_SOURCES
     "${SRC_DIR}/web/web_client_server_lifecycle.cpp"
     "${SRC_DIR}/web/web_canonical_gfxworld.cpp"
@@ -292,6 +307,21 @@ target_sources(KisakCOD-web PRIVATE
     "${SRC_DIR}/qcommon/msg.cpp"
     "${SRC_DIR}/qcommon/unzip.cpp"
 )
+
+if (KISAK_WEB_GAME STREQUAL "mp")
+    # Multiplayer client/server/game/cgame/UI owners and the LAN relay
+    # transport that replaces win32/win_net.cpp.
+    target_sources(KisakCOD-web PRIVATE
+        ${CGAME_MP}
+        ${CLIENT_MP}
+        ${GAME_MP}
+        ${SERVER_MP}
+        ${UI_MP}
+        ${GROUPVOICE_SPEEX}
+        "${SRC_DIR}/groupvoice/decode.cpp"
+        "${SRC_DIR}/groupvoice/encode.cpp"
+        "${SRC_DIR}/web/web_net.cpp")
+endif()
 
 set_source_files_properties(
     "${SRC_DIR}/game/g_main.cpp"
@@ -416,7 +446,7 @@ add_executable(KisakCOD-web-runtime-prefix-check EXCLUDE_FROM_ALL
 target_compile_features(KisakCOD-web-runtime-prefix-check PRIVATE cxx_std_20)
 target_include_directories(KisakCOD-web-runtime-prefix-check PRIVATE "${SRC_DIR}" "${DEPS_DIR}")
 target_compile_definitions(KisakCOD-web-runtime-prefix-check PRIVATE
-    KISAK_WEB=1 KISAK_SP=1 KISAK_GATE3_COM_INIT_PREFIX=1 dNODEBUG=1)
+    KISAK_WEB=1 ${KISAK_WEB_GAME_DEFINITION} KISAK_GATE3_COM_INIT_PREFIX=1 dNODEBUG=1)
 target_compile_options(KisakCOD-web-runtime-prefix-check PRIVATE "-fwasm-exceptions")
 target_link_options(KisakCOD-web-runtime-prefix-check PRIVATE
     "-sENVIRONMENT=node"

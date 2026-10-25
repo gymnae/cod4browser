@@ -2,17 +2,20 @@
 # Linux/macOS counterpart of tools/build_web.ps1. Expects the pinned emsdk at
 # .tools/emsdk (activated) and FFmpeg sources at .tools/ffmpeg-<version>.
 #
-# Usage: tools/build_web.sh [Release|Debug] [--diagnostics] [--target NAME]
+# Usage: tools/build_web.sh [Release|Debug] [--mp] [--diagnostics] [--target NAME]
+#   --mp  builds the LAN multiplayer site into build/web-mp (see docs/lan-multiplayer.md)
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 configuration=Release
 diagnostics=OFF
+game=sp
 target=
 while [ $# -gt 0 ]; do
     case "$1" in
         Release|Debug) configuration=$1 ;;
         --diagnostics) diagnostics=ON ;;
+        --mp) game=mp ;;
         --target) shift; target=$1 ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
@@ -28,10 +31,11 @@ for required in "$EM_CONFIG" "$toolchain"; do
     test -f "$required" || { echo "missing pinned toolchain file: $required" >&2; exit 1; }
 done
 
+suffix=$([ "$game" = mp ] && echo -mp || true)
 if [ "$diagnostics" = ON ]; then
-    build="$root/build/web-diagnostics"; : "${target:=KisakCOD-web-diagnostics}"
+    build="$root/build/web-diagnostics$suffix"; : "${target:=KisakCOD-web-diagnostics}"
 else
-    build="$root/build/web"; : "${target:=KisakCOD-web}"
+    build="$root/build/web$suffix"; : "${target:=KisakCOD-web}"
 fi
 
 # FFmpeg Bink decoder (same configure line as tools/build_cinematic_codec.sh).
@@ -64,6 +68,7 @@ cmake -S "$root" -B "$build" -G Ninja \
     -DKISAK_PLATFORM=web \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -DKISAK_WEB_DIAGNOSTICS="$diagnostics" \
+    -DKISAK_WEB_GAME="$game" \
     -DCMAKE_BUILD_TYPE="$configuration" \
     ${KISAK_WEB_CMAKE_ARGS:-}
 cmake --build "$build" --target "$target" --parallel "$jobs"

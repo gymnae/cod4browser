@@ -9,9 +9,13 @@
 
 #include <EffectsCore/fx_system.h>
 
-#include <gfx_d3d/r_scene.h>
-#include <gfx_d3d/r_workercmds_common.h>
-
+#include <physics/phys_preset.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <script/scr_const.h>
 
 #include <physics/phys_local.h>

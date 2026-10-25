@@ -4,6 +4,7 @@
 
 #include <universal/q_shared.h>
 #include "ui_mp.h"
+#include <gfx_d3d/r_registration_api.h>
 #include <universal/q_parse.h>
 #include <database/database.h>
 #include <universal/com_files.h>

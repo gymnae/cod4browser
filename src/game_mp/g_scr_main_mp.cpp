@@ -6259,7 +6259,7 @@ int32_t Scr_ParseGameTypeList_LoadObj()
             dest = g_scr_data.gametype.list[v11].pszScript;
             I_strncpyz(dest, src, 64);
             //strlwr(dest);
-            _strlwr(dest);
+            I_strlwr(dest);
             qpath = va("maps/mp/gametypes/%s.txt", src);
             len = FS_FOpenFileByMode(qpath, &f, FS_READ);
             if (len > 0 && len < 1024)

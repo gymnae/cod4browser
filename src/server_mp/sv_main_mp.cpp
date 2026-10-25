@@ -20,7 +20,7 @@
 #include <script/scr_debugger.h>
 #include <universal/profile.h>
 
-#ifdef WIN32
+#if defined(WIN32) || defined(KISAK_WEB)
 #include <win32/win_steam.h>
 #else
 #error Steam auth for Arch(Server)
@@ -953,7 +953,12 @@ void __cdecl SV_RunFrame()
     PROF_SCOPED("SV_RunFrame");
 
     if (Win_GetThreadLock() == THREAD_LOCK_ALL)
+#ifdef KISAK_WEB
+        // Browser raw timer ticks are milliseconds (universal/timing.cpp).
+        start = Sys_MillisecondsRaw();
+#else
         start = __rdtsc();
+#endif
     else
         start = (int)Sys_MillisecondsRaw();
     SV_ResetSkeletonCache();
@@ -967,7 +972,11 @@ void __cdecl SV_RunFrame()
     CL_UpdateDebugServerData();
 
     if (Win_GetThreadLock() == THREAD_LOCK_ALL)
+#ifdef KISAK_WEB
+        v0 = Sys_MillisecondsRaw();
+#else
         v0 = __rdtsc();
+#endif
     else
         v0 = (int)Sys_MillisecondsRaw();
     ticks = v0 - start;
@@ -987,7 +996,7 @@ void __cdecl SV_UpdatePerformanceFrame(float time)
     float v2; // [esp+4h] [ebp-24h]
     float v3; // [esp+8h] [ebp-20h]
     float v4; // [esp+Ch] [ebp-1Ch]
-    DWORD wallClockEndTime; // [esp+14h] [ebp-14h]
+    uint32_t wallClockEndTime; // [esp+14h] [ebp-14h]
     ServerProfileTimes *profile; // [esp+18h] [ebp-10h]
     float maxTime; // [esp+1Ch] [ebp-Ch]
     float minTime; // [esp+20h] [ebp-8h]

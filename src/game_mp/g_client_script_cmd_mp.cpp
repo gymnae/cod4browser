@@ -2394,35 +2394,27 @@ void __cdecl PlayerCmd_SetReverb(scr_entref_t entref)
 }
 
 //void __cdecl PlayerCmd_DeactivateReverb(scr_entref_t *entref)
-void __cdecl PlayerCmd_DeactivateReverb(scr_entref_t e)
+void __cdecl PlayerCmd_DeactivateReverb(scr_entref_t entref)
 {
-    scr_entref_t *entref = &e; // HACK
+    float fadetime = 0.0f;
+    int32_t prio;
+    uint32_t numParam;
+    uint16_t prioName;
 
-    uint16_t v1; // r30
-    const char *v2; // r3
-    double Float; // fp31
-    uint32_t NumParam; // r3
-    int32_t ConstString; // r10
-    const char *v6; // r3
-
-    v1 = HIWORD(entref);
-    if ((_WORD)entref)
+    if (entref.classnum)
     {
-        v2 = "not an entity";
+        Scr_ObjectError("not an entity");
     }
     else
     {
-        if (g_entities[HIWORD(entref)].client)
-            goto LABEL_6;
-        v2 = va("entity %i is not a player", HIWORD(entref));
+        iassert(entref.entnum < MAX_GENTITIES);
+        if (!g_entities[entref.entnum].client)
+            Scr_ObjectError(va("entity %i is not a player", entref.entnum));
     }
-    Scr_ObjectError(v2);
-LABEL_6:
-    Float = 0.0;
-    NumParam = Scr_GetNumParam();
-    if (NumParam != 1)
+    numParam = Scr_GetNumParam();
+    if (numParam != 1)
     {
-        if (NumParam != 2)
+        if (numParam != 2)
         {
             Scr_Error(
                 "USAGE: player deactivateReverb(\"priority\", fadetime = 0);\n"
@@ -2430,13 +2422,18 @@ LABEL_6:
                 "nt fading to the next lowest active reverb priority level in seconds\n");
             return;
         }
-        Float = Scr_GetFloat(1);
+        fadetime = Scr_GetFloat(1);
     }
-    ConstString = Scr_GetConstString(0);
-    if (ConstString != scr_const.snd_enveffectsprio_level && ConstString != scr_const.snd_enveffectsprio_shellshock)
+    prioName = Scr_GetConstString(0);
+    prio = 1;
+    if (prioName == scr_const.snd_enveffectsprio_level)
+        prio = 1;
+    else if (prioName == scr_const.snd_enveffectsprio_shellshock)
+        prio = 2;
+    else
         Scr_Error("priority must be 'snd_enveffectsprio_level' or 'snd_enveffectsprio_shellshock'\n");
-    v6 = va("%c %i \"%s\" %g %g %g", 68, Float);
-    SV_GameSendServerCommand(v1, SV_CMD_RELIABLE, v6);
+    // Matches CG_DeactivateReverbCmd: "D <priority> <fadetime>".
+    SV_GameSendServerCommand(entref.entnum, SV_CMD_RELIABLE, va("%c %i %g", 68, prio, fadetime));
 }
 
 void __cdecl PlayerCmd_SetChannelVolumes(scr_entref_t entref)
@@ -2499,35 +2496,27 @@ void __cdecl PlayerCmd_SetChannelVolumes(scr_entref_t entref)
 }
 
 //void __cdecl PlayerCmd_DeactivateChannelVolumes(scr_entref_t *entref)
-void __cdecl PlayerCmd_DeactivateChannelVolumes(scr_entref_t e)
+void __cdecl PlayerCmd_DeactivateChannelVolumes(scr_entref_t entref)
 {
-    scr_entref_t *entref = &e; // HACK
+    float fadetime = 0.0f;
+    int32_t prio;
+    uint32_t numParam;
+    uint16_t prioName;
 
-    uint16_t v1; // r30
-    const char *v2; // r3
-    double Float; // fp31
-    uint32_t NumParam; // r3
-    int32_t ConstString; // r10
-    const char *v6; // r3
-
-    v1 = HIWORD(entref);
-    if ((_WORD)entref)
+    if (entref.classnum)
     {
-        v2 = "not an entity";
+        Scr_ObjectError("not an entity");
     }
     else
     {
-        if (g_entities[HIWORD(entref)].client)
-            goto LABEL_6;
-        v2 = va("entity %i is not a player", HIWORD(entref));
+        iassert(entref.entnum < MAX_GENTITIES);
+        if (!g_entities[entref.entnum].client)
+            Scr_ObjectError(va("entity %i is not a player", entref.entnum));
     }
-    Scr_ObjectError(v2);
-LABEL_6:
-    Float = 0.0;
-    NumParam = Scr_GetNumParam();
-    if (NumParam != 1)
+    numParam = Scr_GetNumParam();
+    if (numParam != 1)
     {
-        if (NumParam != 2)
+        if (numParam != 2)
         {
             Scr_Error(
                 "USAGE: player deactivatechannelvolumes(\"priority\", fadetime = 0);\n"
@@ -2535,18 +2524,21 @@ LABEL_6:
                 "llshock\", fadetime is the time spent fading to the next lowest active reverb priority level in seconds\n");
             return;
         }
-        Float = Scr_GetFloat(1);
+        fadetime = Scr_GetFloat(1);
     }
-    ConstString = Scr_GetConstString(0);
-    if (ConstString != scr_const.snd_channelvolprio_holdbreath
-        && ConstString != scr_const.snd_channelvolprio_pain
-        && ConstString != scr_const.snd_channelvolprio_shellshock)
-    {
+    prioName = Scr_GetConstString(0);
+    prio = 1;
+    if (prioName == scr_const.snd_channelvolprio_holdbreath)
+        prio = 1;
+    else if (prioName == scr_const.snd_channelvolprio_pain)
+        prio = 2;
+    else if (prioName == scr_const.snd_channelvolprio_shellshock)
+        prio = 3;
+    else
         Scr_Error(
             "priority must be 'snd_channelvolprio_holdbreath', 'snd_channelvolprio_pain', or 'snd_channelvolprio_shellshock'\n");
-    }
-    v6 = va("%c %i \"%s\" %g %g %g", 70, Float);
-    SV_GameSendServerCommand(v1, SV_CMD_RELIABLE, v6);
+    // Matches CG_DeactivateChannelVolCmd: "F <priority> <fadetime>".
+    SV_GameSendServerCommand(entref.entnum, SV_CMD_RELIABLE, va("%c %i %g", 70, prio, fadetime));
 }
 
 void __cdecl ScrCmd_PlayLocalSound(scr_entref_t entref)

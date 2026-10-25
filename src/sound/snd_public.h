@@ -180,6 +180,13 @@ union SndEntHandle // sizeof=0x4
     SndEntHandle_s field;
     int handle;
 };
+// Shared cgame code addresses sound entities through the single-player
+// SndEntHandle; the multiplayer cgame sound API takes the entity number.
+#ifdef KISAK_SP
+#define CG_SND_ENT(entnum) SndEntHandle(entnum)
+#else
+#define CG_SND_ENT(entnum) (entnum)
+#endif
 struct SndStartAliasInfo // sizeof=0x38
 {                                       // ...
     const snd_alias_t *alias0;          // ...

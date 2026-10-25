@@ -8,8 +8,10 @@
 #include <qcommon/md4.h>
 #include <qcommon/com_bsp.h>
 #include "win_net_debug.h"
+#ifndef KISAK_WEB
 #include <Windows.h>
 #include <mmsystem.h>
+#endif
 
 #ifdef KISAK_MP
 #include <client_mp/client_mp.h>
@@ -603,7 +605,11 @@ void __cdecl LiveStorage_Encrypt(StatsFile *statsFile)
     uint32_t key[4]; // [esp+5Ch] [ebp-10h] BYREF
 
     *(uint32_t *)statsFile->magic = *(uint32_t *)"iwm0";
+#ifdef KISAK_WEB
+    statsFile->nonce = Sys_MillisecondsRaw();
+#else
     statsFile->nonce = timeGetTime();
+#endif
     LiveStorage_GetCryptKey(statsFile->nonce, (unsigned __int8 *)key);
     Com_BlockChecksum128(
         (unsigned __int8 *)&statsFile->body.statsData,

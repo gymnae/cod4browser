@@ -209,7 +209,7 @@ void BG_AnimParseError(const char *msg, ...)
     va_list va; // [esp+418h] [ebp+Ch] BYREF
 
     va_start(va, msg);
-    _vsnprintf_s(text, 0x400u, _TRUNCATE, msg, va);
+    vsnprintf(text, 0x400u, msg, va);
     if (globalFilename)
     {
         CurrentParseLine = Com_GetCurrentParseLine();

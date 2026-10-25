@@ -6,7 +6,11 @@
 
 #include <EffectsCore/fx_system.h>
 #include <bgame/bg_local.h>
+#ifdef KISAK_SP
 #include <cgame/cg_pose.h>
+#else
+#include <cgame_mp/cg_local_mp.h>
+#endif
 #include <gfx_d3d/material_types.h>
 #include <gfx_d3d/r_bsp.h>
 #include <universal/com_math.h>

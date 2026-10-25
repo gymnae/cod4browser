@@ -1,3 +1,11 @@
+#ifndef KISAK_SP
+// Savegame thumbnails exist only in single-player. Multiplayer keeps the
+// renderer's capture hooks as no-ops.
+#include <web/web_renderer.h>
+
+void WebSaveImage_CapturePending() {}
+void WebSaveImage_CancelPending() {}
+#else
 #include <universal/q_shared.h>
 #include <client/client.h>
 #include <gfx_d3d/r_savegame_image.h>
@@ -288,3 +296,5 @@ extern "C" EMSCRIPTEN_KEEPALIVE int KisakWeb_TestSaveImage(int operation)
     return -1;
 }
 #endif
+
+#endif // KISAK_SP

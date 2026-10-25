@@ -1,7 +1,7 @@
 #include <universal/q_shared.h>
 #include <qcommon/qcommon.h>
 
-#include "dynentity_client.h"
+#include "DynEntity_client.h"
 #include <gfx_d3d/r_dynentity_api.h>
 #include <cgame/cg_local.h>
 #include <EffectsCore/fx_system.h>
@@ -992,7 +992,7 @@ void __cdecl DynEntCl_EntityImpactEvent(
             Vec3Sub(hitPos, start, hitDir);
             Vec3Normalize(hitDir);
             if (isMelee)
-                CG_PlaySoundAlias(localClientNum, SndEntHandle(ENTITYNUM_WORLD), hitPos, cgMedia.meleeKnifeHitOther);
+                CG_PlaySoundAlias(localClientNum, CG_SND_ENT(ENTITYNUM_WORLD), hitPos, cgMedia.meleeKnifeHitOther);
             else
                 DynEntCl_PlayImpactEffects(
                     localClientNum,
@@ -1078,7 +1078,7 @@ void __cdecl DynEntCl_PlayImpactEffects(
         DynEntCl_PlayEventFx(hitFx, hitPos, axis);
     }
     if (hitSound)
-        CG_PlaySoundAlias(localClientNum, SndEntHandle(ENTITYNUM_WORLD), hitPos, hitSound);
+        CG_PlaySoundAlias(localClientNum, CG_SND_ENT(ENTITYNUM_WORLD), hitPos, hitSound);
 }
 
 void __cdecl DynEntCl_PlayEventFx(const FxEffectDef *def, const float *origin, const float (*axis)[3])
@@ -1176,7 +1176,7 @@ char __cdecl DynEntCl_DynEntImpactEvent(
     Vec3Normalize(hitDir);
     if (isMelee)
     {
-        CG_PlaySoundAlias(localClientNum, SndEntHandle(ENTITYNUM_WORLD), hitPos, cgMedia.meleeKnifeHitOther);
+        CG_PlaySoundAlias(localClientNum, CG_SND_ENT(ENTITYNUM_WORLD), hitPos, cgMedia.meleeKnifeHitOther);
     }
     else
     {

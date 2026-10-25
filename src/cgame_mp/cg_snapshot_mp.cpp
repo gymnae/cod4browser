@@ -10,8 +10,12 @@
 
 #include <physics/phys_local.h>
 #include <ragdoll/ragdoll.h>
-#include <gfx_d3d/r_dpvs.h>
-#include <gfx_d3d/r_model.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <EffectsCore/fx_system.h>
 #include <aim_assist/aim_assist.h>
 #include <universal/profile.h>

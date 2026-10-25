@@ -19,14 +19,16 @@
 #include <stringed/stringed_hooks.h>
 #include <qcommon/com_bsp.h>
 #include <universal/com_sndalias.h>
-#include <gfx_d3d/r_scene.h>
-#include <gfx_d3d/r_bsp.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <database/database.h>
 #include <universal/com_files.h>
 #include <universal/q_parse.h>
 #include <EffectsCore/fx_system.h>
-#include <gfx_d3d/r_fog.h>
-
 float color_allies[4];
 float color_axis[4];
 
@@ -288,7 +290,7 @@ int32_t __cdecl CL_CGameNeedsServerCommand(int32_t localClientNum, int32_t serve
             CL_ConfigstringModified(localClientNum);
             return 1;
         case 'w':
-            if (argc >= 3 && (v3 = Cmd_Argv(2), !_stricmp(v3, "PB")))
+            if (argc >= 3 && (v3 = Cmd_Argv(2), !I_stricmp(v3, "PB")))
             {
                 v9 = Cmd_Argv(1);
                 v4 = SEH_SafeTranslateString((char*)"EXE_SERVERDISCONNECTREASON");

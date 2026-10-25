@@ -14,11 +14,15 @@
 #include <qcommon/cmd.h>
 
 #include <script/scr_const.h>
-#include <gfx_d3d/r_dpvs.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <qcommon/threads.h>
 #include <client/client.h>
 #include <aim_assist/aim_assist.h>
-#include <gfx_d3d/r_workercmds_common.h>
 #include <universal/profile.h>
 #include <game_mp/g_main_mp.h>
 
@@ -1273,7 +1277,13 @@ void __cdecl CG_UpdateKillCamEntityViewOffset(int32_t localClientNum)
 
 void __cdecl CL_SyncGpu(int(__cdecl *WorkCallback)(uint64_t))
 {
+#ifdef KISAK_WEB
+    // The WebGL2 backend submits each frame synchronously in the engine
+    // Worker; there is no separate native GPU fence to wait on.
+    (void)WorkCallback;
+#else
     R_SyncGpu(WorkCallback);
+#endif
 }
 
 int32_t __cdecl CG_DrawActiveFrame(

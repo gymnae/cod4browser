@@ -490,14 +490,14 @@ void __cdecl DynEnt_LoadEntities()
                                                             if (I_stricmp(key, "momofinertia"))
                                                             {
                                                                 if (!I_stricmp(key, "prodofinertia"))
-                                                                    sscanf_s(value, "%f %f %f", 
+                                                                    sscanf(value, "%f %f %f", 
                                                                         &params.productsOfInertia[0],
                                                                         &params.productsOfInertia[1],
                                                                         &params.productsOfInertia[2]);
                                                             }
                                                             else
                                                             {
-                                                                sscanf_s(
+                                                                sscanf(
                                                                     value,
                                                                     "%f %f %f",
                                                                     &params.momentsOfInertia[0],
@@ -508,7 +508,7 @@ void __cdecl DynEnt_LoadEntities()
                                                         }
                                                         else
                                                         {
-                                                            sscanf_s(
+                                                            sscanf(
                                                                 value,
                                                                 "%f %f %f",
                                                                 &params.centerOfMass[0],
@@ -535,12 +535,12 @@ void __cdecl DynEnt_LoadEntities()
                                             }
                                             else
                                             {
-                                                sscanf_s(value, "%f %f %f", &params.angles[0], &params.angles[1], &params.angles[2]);
+                                                sscanf(value, "%f %f %f", &params.angles[0], &params.angles[1], &params.angles[2]);
                                             }
                                         }
                                         else
                                         {
-                                            sscanf_s(value, "%f %f %f", &params.origin[0], &params.origin[1], &params.origin[2]);
+                                            sscanf(value, "%f %f %f", &params.origin[0], &params.origin[1], &params.origin[2]);
                                         }
                                     }
                                     else

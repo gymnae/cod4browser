@@ -1,7 +1,8 @@
-#include <client/cl_input.h>
-#include <client/cl_scrn.h>
 #include <client/client.h>
 #include <cgame/cg_local.h>
+#ifdef KISAK_SP
+#include <client/cl_input.h>
+#include <client/cl_scrn.h>
 #include <cgame/cg_main.h>
 #include <cgame/cg_vehicle_hud.h>
 #include <game/actor.h>
@@ -9,16 +10,30 @@
 #include <game/g_local.h>
 #include <game/g_main.h>
 #include <game/savememory.h>
+#else
+#include <client_mp/client_mp.h>
+#include <cgame_mp/cg_local_mp.h>
+#include <game_mp/g_main_mp.h>
+#include <ragdoll/ragdoll.h>
+#endif
 #include <gfx_d3d/r_debugger_api.h>
 #include <qcommon/cmd.h>
 #include <qcommon/qcommon.h>
+#ifdef KISAK_SP
 #include <server/server.h>
 #include <server/sv_public.h>
+#else
+#include <server_mp/server_mp.h>
+#endif
 #include <script/scr_vm.h>
 #include <qcommon/system.h>
 #include <universal/dvar.h>
 #include <universal/com_memory.h>
+#ifdef KISAK_SP
 #include <ui/ui.h>
+#else
+#include <ui_mp/ui_mp.h>
+#endif
 #include <web/web_client_server_lifecycle.h>
 #include <web/web_frame_profile.h>
 #include <web/web_frame_timing.h>
@@ -35,6 +50,9 @@
 #include <limits>
 
 extern errorParm_t errorcode;
+#ifdef KISAK_MP
+extern int dvar_modifiedFlags; // universal/dvar.cpp
+#endif
 extern char com_errorMessage[4096];
 extern int com_lastFrameTime[4];
 void WebCinematic_Update();
@@ -496,6 +514,13 @@ bool RunCGameFrame()
     // after wall-clock frame admission and before the authoritative server.
     frameMilliseconds = Com_ModifyMsec(frameMilliseconds);
     g_frameSimulationMilliseconds = frameMilliseconds;
+#ifdef KISAK_MP
+    // Native Com_Frame drains network packets in Com_EventLoop before the
+    // server frame. Browser input does not use the system event queue, so
+    // dispatch the relay/loopback packets directly.
+    Com_ClientPacketEvent();
+    Com_ServerPacketEvent();
+#endif
     frameMilliseconds = SV_Frame(frameMilliseconds);
     #if KISAK_WEB_DIAGNOSTICS
     if (profile)
@@ -505,6 +530,11 @@ bool RunCGameFrame()
     }
     #endif
     CL_RunOncePerClientFrame(0, frameMilliseconds);
+#ifdef KISAK_MP
+    // Second Com_EventLoop of the native frame, after the client's commands.
+    Com_ClientPacketEvent();
+    Com_ServerPacketEvent();
+#endif
     #if KISAK_WEB_DIAGNOSTICS
     if (profile)
     {
@@ -528,7 +558,15 @@ bool RunCGameFrame()
         profileStarted = WebFrameProfile_Now();
     }
     #endif
+#ifdef KISAK_MP
+    CL_Frame(0);
+    // Native multiplayer Com_Frame: clear the menu-modified dvar flag and let
+    // Com_UpdateMenu open the main menu whenever no game is active.
+    dvar_modifiedFlags &= ~2;
+    Com_UpdateMenu();
+#else
     CL_Frame(0, frameMilliseconds);
+#endif
     #if KISAK_WEB_DIAGNOSTICS
     if (profile)
     {
@@ -537,6 +575,9 @@ bool RunCGameFrame()
     }
     #endif
     SCR_UpdateScreen();
+#ifdef KISAK_MP
+    Ragdoll_Update(frameMilliseconds);
+#endif
     #if KISAK_WEB_DIAGNOSTICS
     if (profile)
     {
@@ -552,9 +593,14 @@ bool RunCGameFrame()
     // Match CL_CGameRendering's positive lifecycle gate without using
     // CL_IsCGameRendering: the latter additionally requires cls.uiStarted,
     // which is not part of the cgame rendering contract on this web path.
+#ifdef KISAK_MP
+    if (clientUIActives[0].connectionState == CA_ACTIVE && !UI_IsFullscreen(0))
+        CL_UpdateSound();
+#else
     if (clientUIActives[0].connectionState == CA_ACTIVE &&
         !UI_IsFullscreen() && !CL_SkipRendering())
         CL_UpdateSound();
+#endif
     #if KISAK_WEB_DIAGNOSTICS
     if (profile)
         profile->soundMs = WebFrameProfile_Now() - profileStarted;
@@ -563,9 +609,13 @@ bool RunCGameFrame()
     if (activeFrameCount == 1u || activeFrameCount == 120u)
     {
         Web_Log(WebLogLevel::Info,
-            "[kisakcod-web] Canonical SP pump frame %u: msec=%d, "
-            "levelTime=%d, paused=%d, firstSnapshot=%d.\n",
+            "[kisakcod-web] Canonical pump frame %u: msec=%d, "
+            "serverTime=%d, paused=%d, firstSnapshot=%d.\n",
+#ifdef KISAK_MP
+            activeFrameCount, frameMilliseconds, svs.time,
+#else
             activeFrameCount, frameMilliseconds, sv.levelTime,
+#endif
             cl_paused ? cl_paused->current.integer : -1,
             CL_IsCgameInitialized(0) ? 1 : 0);
     }

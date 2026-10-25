@@ -406,7 +406,7 @@ void __cdecl CG_PrepOffHand(int32_t localClientNum, const entityState_s *ent, ui
             weaponIndex);
     weapDef = BG_GetWeaponDef(weaponIndex);
     if (weapDef->pullbackSound)
-        CG_PlayEntitySoundAlias(localClientNum, SndEntHandle(ent->number), weapDef->pullbackSound);
+        CG_PlayEntitySoundAlias(localClientNum, CG_SND_ENT(ent->number), weapDef->pullbackSound);
 }
 
 void __cdecl CG_UseOffHand(int32_t localClientNum, const centity_s *cent, uint32_t weaponIndex)
@@ -447,7 +447,7 @@ void __cdecl CG_UseOffHand(int32_t localClientNum, const centity_s *cent, uint32
             if (!obja || !CG_DObjGetWorldTagPos(&cent->pose, obja, scr_const.tag_flash, origin))
                 BG_EvaluateTrajectory(&cent->nextState.lerp.pos, cgameGlob->time, origin);
         }
-        CG_PlaySoundAlias(localClientNum, SndEntHandle(cent->nextState.number), origin, weapDef->fireSound);
+        CG_PlaySoundAlias(localClientNum, CG_SND_ENT(cent->nextState.number), origin, weapDef->fireSound);
     }
 }
 

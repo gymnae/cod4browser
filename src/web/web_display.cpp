@@ -1,9 +1,18 @@
 #include <client/client.h>
+#ifdef KISAK_SP
 #include <cgame/cg_main.h>
+#else
+#include <client_mp/client_mp.h>
+#include <cgame_mp/cg_local_mp.h>
+#endif
 #include <gfx_d3d/r_dvars.h>
 #include <qcommon/qcommon.h>
 #include <qcommon/qcommon_math.h>
+#ifdef KISAK_SP
 #include <ui/ui.h>
+#else
+#include <ui_mp/ui_mp.h>
+#endif
 #include "web_display.h"
 
 #include <emscripten.h>
@@ -65,9 +74,12 @@ void StoreSize(vidConfig_t *config, std::uint32_t width, std::uint32_t height)
     }
     config->aspectRatioScenePixel = height * config->aspectRatioWindow / width;
     config->aspectRatioDisplayPixel = 1.0f;
-    config->isWideScreen = config->aspectRatioWindow != 4.0f / 3.0f;
+    const bool wideScreen = config->aspectRatioWindow != 4.0f / 3.0f;
+#ifdef KISAK_SP
+    config->isWideScreen = wideScreen;
     config->isHiDef = width >= 1280;
-    if (com_wideScreen) Dvar_SetBool(com_wideScreen, config->isWideScreen != 0);
+#endif
+    if (com_wideScreen) Dvar_SetBool(com_wideScreen, wideScreen);
 }
 }
 
@@ -113,6 +125,17 @@ void WebDisplay_Update()
         height == cls.vidConfig.displayHeight)) return;
     StoreSize(&cls.vidConfig, width, height);
     CL_UpdateScreenPlacement();
+#ifdef KISAK_SP
     if (cls.uiStarted) UI_UpdateScreenDimensions();
+#else
+    // Multiplayer UI_Init computes these inline; repeat it for the new size.
+    if (cls.uiStarted)
+    {
+        UiContext &dc = uiInfoArray.uiDC;
+        CL_GetScreenDimensions(&dc.screenWidth, &dc.screenHeight, &dc.screenAspect);
+        dc.bias = 480 * dc.screenWidth <= 640 * dc.screenHeight
+            ? 0.0f : (dc.screenWidth - dc.screenHeight * (4.0f / 3.0f)) * 0.5f;
+    }
+#endif
     if (CL_IsCgameInitialized(0)) CG_InitViewDimensions(0);
 }

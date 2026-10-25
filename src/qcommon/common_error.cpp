@@ -8,6 +8,9 @@
 #include <database/database.h>
 #include <gfx_d3d/r_debugger_api.h>
 #include <client/client.h>
+#ifdef KISAK_MP
+#include <client_mp/client_mp.h>
+#endif
 #include <stringed/stringed_hooks.h>
 #include <universal/com_memory.h>
 #include <universal/com_files.h>

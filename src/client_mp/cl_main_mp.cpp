@@ -28,7 +28,13 @@
 #include <database/database.h>
 #include <sound/snd_local.h>
 #include <stringed/stringed_hooks.h>
-#include <gfx_d3d/r_init.h>
+#include <gfx_d3d/r_configuration.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <qcommon/dl_main.h>
 #include <server_mp/server_mp.h>
 #include <universal/profile.h>
@@ -36,7 +42,7 @@
 
 #include <ui_mp/ui_mp.h>
 
-#ifdef WIN32
+#if defined(WIN32) || defined(KISAK_WEB)
 #include <win32/win_steam.h>
 #include <universal/base64.h>
 #else
@@ -668,7 +674,16 @@ void __cdecl CL_Setenv_f()
             I_strncat(buffer, 1024, v1);
             I_strncat(buffer, 1024, " ");
         }
+#ifdef KISAK_WEB
+        // POSIX putenv would keep this stack buffer; setenv copies.
+        if (char *separator = strchr(buffer, '='))
+        {
+            *separator = 0;
+            setenv(buffer, separator + 1, 1);
+        }
+#else
         _putenv(buffer);
+#endif
     }
 }
 
@@ -1173,7 +1188,7 @@ char __cdecl CL_ConnectionlessPacket(int localClientNum, netadr_t from, msg_t *m
     MSG_ReadLong(msg);
     CL_Netchan_AddOOBProfilePacket(localClientNum, msg->cursize);
     //if (!strnicmp((const char *)msg->data + 4, "PB_", 3u))
-    if (!_strnicmp((const char *)msg->data + 4, "PB_", 3u))
+    if (!I_strnicmp((const char *)msg->data + 4, "PB_", 3u))
     {
         // LWSS: Remove Punkbuster crap
         //if (msg->data[7] == 83 || msg->data[7] == 50 || msg->data[7] == 73)
@@ -4350,10 +4365,15 @@ void __cdecl CL_InitDedicated()
             1,
             DVAR_CHEAT,
             "Current game is an online game with stats, custom classes, unlocks");
+#ifdef KISAK_WEB
+    (void)config;
+    Com_Error(ERR_FATAL, "Dedicated server mode is not available in the browser");
+#else
     SetupGfxConfig(&config);
     CL_SetFastFileNames(&config, 1);
     R_MakeDedicated(&config);
     Sys_HideSplashWindow();
     Sys_ShowConsole();
     Sys_NormalExit();
+#endif
 }

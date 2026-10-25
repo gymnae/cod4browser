@@ -109,6 +109,11 @@ static ID_INLINE int BigLong(int l) { return LongSwap(l); }
 // without admitting a Win32 dependency into the browser platform.
 static inline short LittleShort(short value) { return value; }
 static inline int LittleLong(int value) { return value; }
+int __cdecl ShortSwap(__int16 l);
+int __cdecl LongSwap(int l);
+// Network byte order (netadr_t ports, master server packets).
+static inline short BigShort(short l) { return static_cast<short>(ShortSwap(l)); }
+static inline int BigLong(int l) { return LongSwap(l); }
 
 #endif // WIN32
 

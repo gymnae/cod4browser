@@ -1,8 +1,8 @@
 # LAN multiplayer
 
-Status: in progress. The relay (`server/lan-relay/`) and the engine transport
-(`src/web/web_net.cpp`) exist. The multiplayer browser target is being brought up
-(see "Bring-up status" below). Nothing here is a qualified release.
+Status: in progress. The multiplayer browser target builds and links, and boots
+to the asset import screen in headless Chromium. It has not yet been run with
+real game files. Nothing here is a qualified release.
 
 ## Goal
 
@@ -51,9 +51,9 @@ The engine connects to `wss://<page host>/lan?v=1` by default. Set
 
 ## Server setup (Linux + Caddy)
 
-1. Build the browser site (`tools/build_web.sh`; the multiplayer target is
-   `KisakCOD-web-mp` once it builds) and copy `build/web*/site` to
-   `/srv/kisakcod/site`.
+1. Build the multiplayer site with `tools/build_web.sh --mp` (Windows:
+   configure with `-DKISAK_WEB_GAME=mp` in a separate build directory) and copy
+   `build/web-mp/site` to `/srv/kisakcod/site`.
 2. Run the relay. It needs Node.js 22 or newer and has no npm dependencies:
 
    ```ini
@@ -121,7 +121,22 @@ LAN and to owners of the game, because the files are Activision's.
 | Piece | State |
 | --- | --- |
 | Relay, broadcast, UDP bridge | Implemented; `node --test tests/node/lan_relay.test.mjs` |
-| Engine transport (`web_net.cpp`) | Implemented; compiled only by the multiplayer target |
-| Multiplayer browser target | In progress |
+| Engine transport (`src/web/web_net.cpp`) | Implemented; packets pumped from the web frame loop like native `Com_EventLoop` |
+| LAN identity instead of Steam tickets (`src/web/web_steam_lan.cpp`) | Implemented; not authentication |
+| Multiplayer browser target (`KISAK_WEB_GAME=mp`) | Compiles, links, boots to asset import in headless Chromium |
+| Multiplayer install profile (`web/asset_profile_mp.mjs`) | Requires the `*_mp` startup zones and `mp_shipment`; imports every `mp_*` map |
+| Gameplay with real files | Not yet tested |
+| Voice chat | Stubbed out (no microphone/speex path yet) |
 | Native Linux dedicated server | Not started |
 | Asset streaming | Not started |
+
+### Multiplayer-specific browser decisions
+
+* The frame loop calls `Com_ClientPacketEvent`/`Com_ServerPacketEvent` before
+  `SV_Frame` and after `CL_RunOncePerClientFrame`, the two points where native
+  `Com_Frame` runs `Com_EventLoop`.
+* The netchan qport is seeded randomly instead of from the CPU timestamp, so
+  tabs that start in the same millisecond do not collide.
+* `cubemapShot` and `r_reflectionProbeGenerate` (native D3D9 baking tools) are
+  unavailable; `Sys_QuitAndStartProcess` (launch single-player/updater) only
+  prints a message.

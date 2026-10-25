@@ -22,7 +22,9 @@
 #include <cgame/cg_local.h>
 #include <cgame_mp/cg_local_mp.h>
 #include <server_mp/server_mp.h>
+#ifndef KISAK_WEB
 #include <win32/win_input.h>
+#endif
 #include <universal/timing.h>
 #include <universal/profile.h>
 
@@ -5989,6 +5991,12 @@ int __cdecl UI_Popup(int localClientNum, const char *menu)
     return 1;
 }
 
+#ifdef KISAK_WEB
+void __cdecl UI_SetSystemCursorPos(UiContext *dc, float x, float y)
+{
+    // The page owns the browser pointer; it cannot be warped.
+}
+#else
 void __cdecl CL_SetCursorPos(tagPOINT x)
 {
     IN_SetCursorPos(x);
@@ -6014,6 +6022,7 @@ void __cdecl UI_SetSystemCursorPos(UiContext *dc, float x, float y)
     X.x = (int)v6;
     CL_SetCursorPos(X);
 }
+#endif
 
 int __cdecl UI_PopupScriptMenu(int localClientNum, const char *menuName, bool useMouse)
 {

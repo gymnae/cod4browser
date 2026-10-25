@@ -18,7 +18,7 @@
 #include <script/scr_memorytree.h>
 #include <database/database.h>
 
-#ifdef WIN32
+#if defined(WIN32) || defined(KISAK_WEB)
 #include <win32/win_steam.h>
 #else
 #error Steam auth for Arch(Server)

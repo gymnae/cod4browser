@@ -3336,7 +3336,7 @@ void __cdecl SND_Init()
     Cmd_AddCommandInternal("snd_deactivateEq", SND_DeactivateEq_f, &SND_DeactivateEq_f_VAR);
 
     Com_Printf(9, "------- sound system successfully initialized -------\n");
-#ifdef KISAK_MP
+#if defined(KISAK_MP) && !defined(KISAK_WEB) // no browser voice chat yet
     Voice_Init();
 #endif
 }
@@ -3582,7 +3582,7 @@ char __cdecl SND_BooleanFromString(const char *value, const char *trueValue, con
 
 void __cdecl SND_Shutdown()
 {
-#ifdef KISAK_MP
+#if defined(KISAK_MP) && !defined(KISAK_WEB) // no browser voice chat yet
     Voice_Shutdown();
 #endif
     if (g_snd.Initialized2d)

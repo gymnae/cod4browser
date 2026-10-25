@@ -1,5 +1,8 @@
 #include <gfx_d3d/r_cinematic_api.h>
 #include <client/client.h>
+#ifdef KISAK_MP
+#include <client_mp/client_mp.h>
+#endif
 #include <database/database.h>
 #include <gfx_d3d/r_material.h>
 #include <gfx_d3d/r_rendercmds.h>

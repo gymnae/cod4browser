@@ -295,6 +295,7 @@ void __cdecl UI_MouseEvent(int localClientNum, int x, int y);
 
 void __cdecl UI_StartServerRefresh(int localClientNum, int full);
 
+extern uiInfo_s uiInfoArray; // On PC this array is just [1].
 extern const dvar_t *ui_customClassName;
 extern const dvar_t *ui_mapname;
 extern const dvar_t *ui_netSource;

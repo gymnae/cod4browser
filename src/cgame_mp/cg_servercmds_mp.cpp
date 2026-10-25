@@ -10,15 +10,17 @@
 #include <database/database.h>
 #include <universal/com_files.h>
 #include <universal/q_parse.h>
-#include <gfx_d3d/r_fog.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <EffectsCore/fx_system.h>
 #include <DynEntity/DynEntity_client.h>
-#include <gfx_d3d/r_bsp.h>
 #include <stringed/stringed_hooks.h>
 #include <win32/win_storage.h>
 #include <qcommon/cmd.h>
-#include <gfx_d3d/r_model.h>
-#include <gfx_d3d/r_primarylights.h>
 #include <qcommon/com_bsp.h>
 
 struct $59835072FC2CD3936CE4A4C9F556010B // sizeof=0x48

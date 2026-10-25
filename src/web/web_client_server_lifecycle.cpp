@@ -1,13 +1,19 @@
-#ifndef KISAK_SP
-#error This file is for SinglePlayer only
+#if !defined(KISAK_SP) && !defined(KISAK_MP)
+#error This file needs an engine identity (KISAK_SP or KISAK_MP)
 #endif
 
-#include <client/cl_fastfile_config.h>
 #include <client/client.h>
+#ifdef KISAK_SP
+#include <client/cl_fastfile_config.h>
 #include <cgame/cg_main.h>
 #include <cgame/cg_draw.h>
 #include <cgame/cg_scoreboard.h>
 #include <cgame/cg_servercmds.h>
+#else
+#include <client_mp/client_mp.h>
+#include <cgame_mp/cg_local_mp.h>
+#include <win32/win_net.h>
+#endif
 #include <database/database.h>
 #include <database/db_registry_publication.h>
 #include <database/db_initialization.h>
@@ -21,8 +27,12 @@
 #include <qcommon/qcommon.h>
 #include <qcommon/com_playerprofile.h>
 #include <qcommon/threads.h>
+#ifdef KISAK_SP
 #include <server/server.h>
 #include <server/sv_public.h>
+#else
+#include <server_mp/server_mp.h>
+#endif
 #include <sound/snd_public.h>
 #include <script/scr_variable.h>
 #include <script/scr_stringlist.h>
@@ -32,7 +42,11 @@
 #include <universal/com_files.h>
 #include <universal/com_memory.h>
 #include <universal/physicalmemory.h>
+#ifdef KISAK_SP
 #include <ui/ui.h>
+#else
+#include <ui_mp/ui_mp.h>
+#endif
 #include <ui/keycodes.h>
 #include <web/web_system.h>
 #include <web/web_browser_bindings.h>
@@ -51,6 +65,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <random>
 #include <string>
 
 // Remaining common.cpp globals while browser startup stops at the mount boundary.
@@ -352,14 +367,25 @@ static void MountCanonicalRuntime()
     Hunk_InitDebugMemory();
     ProfLoad_Init();
     Com_RegisterRuntimeCommands();
+#ifdef KISAK_MP
+    const char *const buildVersion = va(
+        "%s %s build %s %s", "CoD4 MP", "1.0", getBuildNumber(), CPUSTRING);
+#else
     const char *const buildVersion = va(
         "%s %s build %s %s", "CoD4", "1.0", getBuildNumber(), CPUSTRING);
+#endif
     version = Dvar_RegisterString(
         "version", "", DVAR_ROM, "Game version");
     Dvar_SetString(version, buildVersion);
     shortversion = Dvar_RegisterString(
         "shortversion", "1.0", DVAR_ROM | DVAR_SERVERINFO,
         "Short game version");
+#ifdef KISAK_MP
+    // Native Com_Init seeds the netchan qport from the CPU timestamp. Browser
+    // tabs can start in the same millisecond, so use a random seed: peers on
+    // one LAN must not share a qport.
+    Netchan_Init(static_cast<__int16>(std::random_device{}()));
+#endif
     Scr_InitVariables();
     Scr_Init();
     Scr_Settings(
@@ -369,6 +395,10 @@ static void MountCanonicalRuntime()
     XAnimInit();
     DObjInit();
     SV_Init();
+#ifdef KISAK_MP
+    // Opens the LAN relay connection (src/web/web_net.cpp).
+    NET_Init();
+#endif
     // The initial browser deployment is intentionally single-threaded. The
     // canonical dvar defaults to an SMP server thread, but the Worker platform
     // cannot run that native thread; leaving it enabled advances snapshot time

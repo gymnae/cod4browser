@@ -11,7 +11,7 @@
 #include <client/client.h>
 #include <cgame_mp/cg_local_mp.h>
 
-#ifdef WIN32
+#if defined(WIN32) || defined(KISAK_WEB)
 #include <win32/win_steam.h>
 #else
 #error Steam Auth for Arch
@@ -386,7 +386,7 @@ void __cdecl CL_Connect_f()
 // This is called by the Client to see if the Auth is even valid before sending to the Server.
 bool __cdecl CL_CDKeyValidate(netadr_t addr)
 {
-#ifdef WIN32
+#if defined(WIN32) || defined(KISAK_WEB)
     return Steam_UpdateClientAuthTicket(addr);
 #else
 #error Steam Auth for Arch

@@ -13,7 +13,12 @@
 
 #include <EffectsCore/fx_system.h>
 #include <script/scr_const.h>
-#include <gfx_d3d/r_scene.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <xanim/xmodel.h>
 #include <xanim/dobj.h>
 

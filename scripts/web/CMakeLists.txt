@@ -309,18 +309,38 @@ target_sources(KisakCOD-web PRIVATE
 )
 
 if (KISAK_WEB_GAME STREQUAL "mp")
-    # Multiplayer client/server/game/cgame/UI owners and the LAN relay
-    # transport that replaces win32/win_net.cpp.
+    # Multiplayer client/server/game/cgame/UI owners, the LAN relay transport
+    # that replaces win32/win_net.cpp and the LAN identity that replaces Steam
+    # tickets. Voice chat (DirectSound + speex) is not part of the first slice.
     target_sources(KisakCOD-web PRIVATE
         ${CGAME_MP}
         ${CLIENT_MP}
         ${GAME_MP}
         ${SERVER_MP}
         ${UI_MP}
-        ${GROUPVOICE_SPEEX}
-        "${SRC_DIR}/groupvoice/decode.cpp"
-        "${SRC_DIR}/groupvoice/encode.cpp"
-        "${SRC_DIR}/web/web_net.cpp")
+        "${SRC_DIR}/qcommon/msg_mp.cpp"
+        "${SRC_DIR}/qcommon/net_chan_mp.cpp"
+        "${SRC_DIR}/qcommon/sv_msg_write_mp.cpp"
+        "${SRC_DIR}/qcommon/huffman.cpp"
+        "${SRC_DIR}/qcommon/common_runtime_mp.cpp"
+        "${SRC_DIR}/qcommon/dl_main.cpp"
+        "${SRC_DIR}/database/db_registry_mp.cpp"
+        "${SRC_DIR}/universal/base64.cpp"
+        "${SRC_DIR}/win32/win_storage.cpp"
+        "${SRC_DIR}/web/web_net.cpp"
+        "${SRC_DIR}/web/web_steam_lan.cpp"
+        "${SRC_DIR}/web/web_platform_mp.cpp")
+    # The decompiled net field codecs switch on int with 0xFFFFFFxx case
+    # labels; MSVC narrows them to the intended negative values, as does
+    # clang once this diagnostic is no longer an error.
+    set_source_files_properties(
+        "${SRC_DIR}/qcommon/msg_mp.cpp"
+        "${SRC_DIR}/qcommon/sv_msg_write_mp.cpp"
+        PROPERTIES COMPILE_OPTIONS "-Wno-c++11-narrowing")
+    # msg.cpp is the single-player message codec; msg_mp.cpp replaces it.
+    get_target_property(KISAK_WEB_MP_SOURCES KisakCOD-web SOURCES)
+    list(REMOVE_ITEM KISAK_WEB_MP_SOURCES "${SRC_DIR}/qcommon/msg.cpp")
+    set_property(TARGET KisakCOD-web PROPERTY SOURCES ${KISAK_WEB_MP_SOURCES})
 endif()
 
 set_source_files_properties(
@@ -502,6 +522,11 @@ foreach(WEB_FILE asset_profile.mjs asset_store.mjs browser_capabilities.mjs
         COPYONLY
     )
 endforeach()
+if (KISAK_WEB_GAME STREQUAL "mp")
+    # Same module interface, multiplayer installation profile.
+    configure_file("${KISAK_WEB_SOURCE_DIR}/asset_profile_mp.mjs"
+        "${KISAK_WEB_SITE_DIR}/asset_profile.mjs" COPYONLY)
+endif()
 configure_file("${KISAK_WEB_SOURCE_DIR}/product_index.html"
     "${KISAK_WEB_SITE_DIR}/index.html" COPYONLY)
 configure_file("${KISAK_WEB_SOURCE_DIR}/product_launcher.mjs"

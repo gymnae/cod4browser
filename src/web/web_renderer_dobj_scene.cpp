@@ -2,7 +2,11 @@
 #include <web/web_frame_profile.h>
 #include <web/web_renderer_material_lookup.h>
 
+#ifdef KISAK_SP
 #include <cgame/cg_pose.h>
+#else
+#include <cgame_mp/cg_local_mp.h>
+#endif
 #include <cgame/cg_local.h>
 #include <gfx_d3d/gfx_world_types.h>
 #include <gfx_d3d/r_cgame_api.h>

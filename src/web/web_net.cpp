@@ -192,10 +192,10 @@ const char *NET_ErrorString()
     return "LAN relay unavailable";
 }
 
-int __cdecl Sys_GetPacket(netadr_t *net_from, msg_t *net_message)
+qboolean Sys_GetPacket(netadr_t *net_from, msg_t *net_message)
 {
     if (!g_networkingEnabled)
-        return 0;
+        return qfalse;
     // Reconnects lazily (rate-limited in JS) if the relay connection dropped.
     if (!KisakLanAddress())
         OpenRelay();
@@ -205,7 +205,7 @@ int __cdecl Sys_GetPacket(netadr_t *net_from, msg_t *net_message)
         int port = 0;
         const int length = KisakLanRecv(net_message->data, net_message->maxsize, &ip, &port);
         if (length == 0)
-            return 0;
+            return qfalse;
         if (length < 0 || length == net_message->maxsize)
         {
             Com_Printf(16, "Oversize packet from LAN relay\n");
@@ -220,7 +220,7 @@ int __cdecl Sys_GetPacket(netadr_t *net_from, msg_t *net_message)
         net_from->port = PortToNetwork(static_cast<std::uint16_t>(port));
         net_message->readcount = 0;
         net_message->cursize = length;
-        return 1;
+        return qtrue;
     }
 }
 

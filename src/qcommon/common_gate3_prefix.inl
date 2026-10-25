@@ -80,9 +80,49 @@ void Com_InitXAssets()
     DB_InitThread();
 }
 
-void QDECL Com_PrintMessage(int, const char *message, int)
+#ifdef KISAK_MP
+// Remote console output capture (SV_ConnectionlessPacket rcon), as in the
+// native common.cpp.
+static char *rd_buffer = nullptr;
+static void (*rd_flush)(char *) = nullptr;
+static std::uint32_t rd_buffersize = 0;
+
+void Com_BeginRedirect(char *buffer, int buffersize, void (*flush)(char *))
+{
+    if (!buffer || !buffersize || !flush)
+        return;
+    rd_buffer = buffer;
+    rd_buffersize = buffersize;
+    rd_flush = flush;
+    *rd_buffer = 0;
+}
+
+void Com_EndRedirect(void)
+{
+    if (rd_flush)
+        rd_flush(rd_buffer);
+    rd_buffer = nullptr;
+    rd_buffersize = 0;
+    rd_flush = nullptr;
+}
+#endif
+
+void QDECL Com_PrintMessage(int channel, const char *message, int)
 {
     Sys_Print(message);
+#ifdef KISAK_MP
+    if (rd_buffer && channel != 6)
+    {
+        if (std::strlen(rd_buffer) + std::strlen(message) > rd_buffersize - 1)
+        {
+            rd_flush(rd_buffer);
+            *rd_buffer = 0;
+        }
+        I_strncat(rd_buffer, rd_buffersize, message);
+    }
+#else
+    (void)channel;
+#endif
 }
 
 void QDECL Com_Printf(int channel, const char *format, ...)
@@ -186,8 +226,15 @@ void __cdecl Com_StartupVariable(const char *match)
     }
 }
 
+#ifdef KISAK_MP
+void Com_InitMultiplayerDvars(); // qcommon/common_runtime_mp.cpp
+#endif
+
 void Com_InitDvars()
 {
+#ifdef KISAK_MP
+    Com_InitMultiplayerDvars();
+#endif
 #if defined(KISAK_WEB)
     com_maxfps = Dvar_RegisterInt("com_maxfps", 60, 0, 1000, DVAR_ARCHIVE, "Cap frames per second");
 #else

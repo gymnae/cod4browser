@@ -6,6 +6,8 @@ struct MemoryFile;
 struct refdef_s;
 
 void __cdecl R_ClearFogs();
+// Multiplayer: the colours behind the team-relative ^8/^9 text codes.
+void __cdecl R_UpdateTeamColors(int team, const float *color_allies, const float *color_axis);
 void __cdecl R_LoadWorld(char *name, int *checksum, int savegame);
 void __cdecl R_RenderScene(const refdef_s *refdef);
 void R_AddCmdSetViewportValues(int x, int y, int width, int height);

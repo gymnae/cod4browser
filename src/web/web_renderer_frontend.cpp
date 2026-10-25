@@ -4,8 +4,14 @@
 // world conversion/submission path.
 
 #include <client/client.h>
+#include <qcommon/com_pack.h>
 #include <cgame/cg_local.h>
+#ifdef KISAK_SP
 #include <cgame/cg_main.h>
+#else
+#include <client_mp/client_mp.h>
+#include <cgame_mp/cg_local_mp.h>
+#endif
 #include <database/database.h>
 #include <database/db_registry_pools.h>
 #include <database/db_registry_publication.h>
@@ -46,7 +52,11 @@
 #include <universal/com_math.h>
 #include <universal/com_memory.h>
 #include <universal/memfile.h>
+#ifdef KISAK_SP
 #include <ui/ui.h>
+#else
+#include <ui_mp/ui_mp.h>
+#endif
 #include <web/web_renderer.h>
 #include <web/web_display.h>
 #include <web/web_frame_profile.h>
@@ -1794,7 +1804,9 @@ void __cdecl R_Shutdown(int destroyWindow)
 
 void __cdecl R_UnloadWorld()
 {
-    UI_InvalidateSaveGameShot();
+#ifdef KISAK_SP
+    UI_InvalidateSaveGameShot(); // multiplayer has no savegame screenshots
+#endif
     g_addedLightCount = 0;
     g_dynamicSpotLightNearPlaneOffset = 0.0f;
     WebRenderer_ReleaseDObjSceneScratch();
@@ -5219,11 +5231,31 @@ bool __cdecl Material_HasAnyFogableTechnique(const Material *material)
     if (!tech) tech = material->techniqueSet;
     return tech->techniques[TECHNIQUE_LIT_BEGIN] || tech->techniques[TECHNIQUE_EMISSIVE];
 }
+namespace
+{
+// Native rg.team/color_allies/color_axis. Only the multiplayer client sets
+// them (R_UpdateTeamColors); single-player keeps the zeroed native defaults.
+int g_teamColorTeam = 0;
+GfxColor g_teamColorAllies(0);
+GfxColor g_teamColorAxis(0);
+}
+void __cdecl R_UpdateTeamColors(int team, const float *color_allies, const float *color_axis)
+{
+    g_teamColorTeam = team;
+    Byte4PackRgba(color_allies, g_teamColorAllies.array);
+    Byte4PackRgba(color_axis, g_teamColorAxis.array);
+}
 void __cdecl RB_LookupColor(std::uint8_t c, GfxColor *color)
 {
     const std::uint32_t index = ColorIndex(c);
-    // SP never calls the MP R_UpdateTeamColors owner; native rg starts zeroed.
-    *color = index < 8u ? color_table[index] : GfxColor(c == '8' || c == '9' ? 0 : -1);
+    if (index < 8u)
+        *color = color_table[index];
+    else if (c == '8') // ^8: the local player's team colour
+        *color = g_teamColorTeam == 2 ? g_teamColorAllies : g_teamColorAxis;
+    else if (c == '9') // ^9: the opposing team colour
+        *color = g_teamColorTeam == 2 ? g_teamColorAxis : g_teamColorAllies;
+    else
+        *color = GfxColor(-1);
 }
 void __cdecl R_TextDrawQuad(const Material *material, float x, float y, float w,
     float h, float s0, float t0, float s1, float t1, float sinAngle, float cosAngle,

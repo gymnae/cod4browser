@@ -2,7 +2,6 @@
 #include "msg_mp.h"
 #include "huffman.h"
 
-#include <Windows.h>
 #include <bgame/bg_local.h>
 #include "sv_msg_write_mp.h"
 #include <server_mp/server_mp.h>
@@ -32,7 +31,7 @@ int __cdecl GetMinBitCountForNum(uint32_t num)
 {
     int v2; // eax
 
-    if (!_BitScanReverse((unsigned long*)&v2, num))
+    if (!Sys_BitScanReverse((uint32_t *)&v2, num))
     {
         //v2 = `CountLeadingZeros'::`2': : notFound;
         v2 = 63;
@@ -2044,8 +2043,8 @@ const int msg_hData[256] =
 
 void MSG_initHuffmanInternal()
 {
-    DWORD time2; // [esp+0h] [ebp-8h]
-    DWORD time; // [esp+4h] [ebp-4h]
+    uint32_t time2; // [esp+0h] [ebp-8h]
+    uint32_t time; // [esp+4h] [ebp-4h]
 
     Huff_Init(&msgHuff);
     time = Sys_Milliseconds();

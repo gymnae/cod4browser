@@ -10,7 +10,12 @@
 
 #include <universal/q_shared.h>
 #include "g_public_mp.h"
-#include <gfx_d3d/r_scene.h>
+#include <gfx_d3d/r_cgame_api.h>
+#include <gfx_d3d/r_client_api.h>
+#include <gfx_d3d/r_registration_api.h>
+#include <gfx_d3d/r_runtime_api.h>
+#include <gfx_d3d/r_world_api.h>
+#include <gfx_d3d/r_worker_api.h>
 #include <EffectsCore/fx_system.h>
 #include <xanim/dobj.h>
 #include <xanim/dobj_utils.h>

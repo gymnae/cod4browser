@@ -1,8 +1,15 @@
 #include <web/web_system.h>
 
+#ifdef KISAK_SP
 #include <client/cl_input.h>
+#else
+#include <client_mp/client_mp.h>
+#endif
 #include <client/client.h>
+#ifdef KISAK_SP
 #include <client/cl_scrn.h>
+#else
+#endif
 #include <database/database.h>
 #include <gfx_d3d/r_cinematic_api.h>
 #include <gfx_d3d/r_rendercmds.h>
@@ -299,7 +306,11 @@ void __cdecl Sys_LoadingKeepAlive()
     R_Cinematic_SyncNow();
     cls.realtime = now;
     R_BeginFrame();
+#ifdef KISAK_SP
     SCR_DrawScreenField(0);
+#else
+    SCR_DrawScreenField(0, 0);
+#endif
     R_EndFrame();
     R_IssueRenderCommands(0xFFFFFFFF);
     WebRenderer_DrawFrame({g_framePumpTicks, now});
@@ -634,8 +645,11 @@ void Sys_Sleep(std::uint32_t)
     // context. All admitted browser runtime paths are cooperative instead.
 }
 
+#ifdef KISAK_SP
+// Single-player has no rank stats; multiplayer links win32/win_storage.cpp.
 int __cdecl LiveStorage_GetStat(int, int) { return 0; }
 void __cdecl LiveStorage_NewUser() {}
+#endif
 
 EM_JS(void, Web_OpenURL, (const char *url), {
     const value = UTF8ToString(url);
